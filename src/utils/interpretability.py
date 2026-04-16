@@ -32,6 +32,11 @@ class GradCAM:
     def generate(self, input_image, class_idx=None):
         self.model.eval()
         
+        # Since the backbone is frozen (requires_grad=False), gradients won't flow
+        # backwards unless we explicitly tell autograd to track the input. This ensures
+        # the backward hook on the target layer is successfully triggered!
+        input_image.requires_grad_()
+        
         # Forward
         output = self.model(input_image)
         if class_idx is None:
