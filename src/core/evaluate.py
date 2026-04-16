@@ -111,13 +111,14 @@ def evaluate_robustness(model, data_dir, model_name, device, batch_size=128):
             })
             
             logging.info(f"Accuracy: {accuracy:.2f}%, Avg Conf: {avg_confidence:.4f}")
+            
+            # Incremental save to prevent data loss on crashes
+            df = pd.DataFrame(results)
+            os.makedirs(TABLES_DIR, exist_ok=True)
+            csv_path = os.path.join(TABLES_DIR, f"{model_name}_robustness_results.csv")
+            df.to_csv(csv_path, index=False)
 
-    # Save to CSV
-    df = pd.DataFrame(results)
-    os.makedirs(TABLES_DIR, exist_ok=True)
-    csv_path = os.path.join(TABLES_DIR, f"{model_name}_robustness_results.csv")
-    df.to_csv(csv_path, index=False)
-    logging.info(f"Saved results to {csv_path}")
+    logging.info(f"Final robustness evaluation saved to {csv_path}")
     
     # Generate Accuracy Dropoff Plot (Instant inference plotting, no training)
     _plot_robustness_dropoff(df, model_name)

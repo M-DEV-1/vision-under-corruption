@@ -33,15 +33,12 @@ def main():
     
     train_loader, val_loader, classes = get_dataloaders(DATA_DIR, BATCH_SIZE)
     
-    for model_name in models_to_run:
-        logging.info(f"=== Processing Model: {model_name} ===")
-        
-        # Load Architecture
-        model = get_model(model_name, NUM_CLASSES)
-        
-        # --- TRAINING ---
-        if args.mode in ['train', 'all']:
-            logging.info(f"Starting Training for {args.epochs} epochs...")
+    # --- TRAINING PHASE ---
+    if args.mode in ['train', 'all']:
+        logging.info("\n========== PHASE 1: TRAINING ==========")
+        for model_name in models_to_run:
+            logging.info(f"=== Training Model: {model_name} ===")
+            model = get_model(model_name, NUM_CLASSES)
             train_model(
                 model=model,
                 train_loader=train_loader,
@@ -54,9 +51,12 @@ def main():
                 no_resume=args.no_resume
             )
             
-        # --- EVALUATION ---
-        if args.mode in ['eval', 'all']:
-            logging.info("Starting Robustness Evaluation...")
+    # --- EVALUATION PHASE ---
+    if args.mode in ['eval', 'all']:
+        logging.info("\n========== PHASE 2: ROBUSTNESS EVALUATION ==========")
+        for model_name in models_to_run:
+            logging.info(f"=== Evaluating Model: {model_name} ===")
+            model = get_model(model_name, NUM_CLASSES)
             # We must load latest checkpoint before evaluation
             from src.core.train import load_checkpoint
             _ = load_checkpoint(model, None, CHECKPOINT_DIR, model_name, device)
@@ -64,9 +64,12 @@ def main():
             model = model.to(device)
             evaluate_robustness(model, DATA_DIR, model_name, device, BATCH_SIZE)
             
-        # --- INTERPRETABILITY ---
-        if args.mode in ['interpret', 'all']:
-            logging.info("Starting Interpretability Generation...")
+    # --- INTERPRETABILITY PHASE ---
+    if args.mode in ['interpret', 'all']:
+        logging.info("\n========== PHASE 3: INTERPRETABILITY GENERATION ==========")
+        for model_name in models_to_run:
+            logging.info(f"=== Generating Grids for Model: {model_name} ===")
+            model = get_model(model_name, NUM_CLASSES)
             from src.core.train import load_checkpoint
             _ = load_checkpoint(model, None, CHECKPOINT_DIR, model_name, device)
             
