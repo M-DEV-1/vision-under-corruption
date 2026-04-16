@@ -15,7 +15,7 @@ from src.models.architecture import get_model
 from src.data.dataset import get_dataloaders
 from src.core.train import train_model
 from src.core.evaluate import evaluate_robustness
-from src.utils.interpretability import GradCAM, generate_vit_attention, overlay_heatmap
+from src.utils.interpretability import GradCAM, generate_vit_attention, overlay_heatmap, generate_robustness_grid
 
 def main():
     parser = argparse.ArgumentParser(description="Attention-ViT vs CNN Pipeline")
@@ -73,26 +73,19 @@ def main():
             model = model.to(device)
             model.eval()
             
-            # Fetch a single batch from validations
-            inputs, labels = next(iter(val_loader))
-            inputs = inputs.to(device)
+            # Fetch a raw un-transformed validation sample
+            from torchvision import datasets
+            raw_val_dataset = datasets.CIFAR100(root=DATA_DIR, train=False, download=True, transform=None)
+            raw_image, label_idx = raw_val_dataset[0]
+            label_name = classes[label_idx]
             
-            # Use the first image in the batch
-            single_img = inputs[0:1]
-            label_name = classes[labels[0].item()]
+            # We will generate a progression grid for 'blur' as the showcase
+            save_path = os.path.join(FIGURES_DIR, f"{model_name}_{label_name}_blur_grid.png")
+            generate_robustness_grid(model, model_name, raw_image, 'blur', device, save_path)
             
-            save_path = os.path.join(FIGURES_DIR, f"{model_name}_{label_name}_cam.png")
-            
-            if model_name == "resnet50":
-                # ResNet uses Grad-CAM on layer4
-                cam = GradCAM(model, target_layer=model.layer4)
-                heatmap = cam.generate(single_img)
-                overlay_heatmap(single_img, heatmap, save_path)
-                
-            elif model_name == "vit_b_16":
-                # ViT uses Attention extraction
-                heatmap = generate_vit_attention(model, single_img)
-                overlay_heatmap(single_img, heatmap, save_path)
+            # Generate a progression grid for 'noise'
+            save_path_noise = os.path.join(FIGURES_DIR, f"{model_name}_{label_name}_noise_grid.png")
+            generate_robustness_grid(model, model_name, raw_image, 'noise', device, save_path_noise)
 
 if __name__ == "__main__":
     main()

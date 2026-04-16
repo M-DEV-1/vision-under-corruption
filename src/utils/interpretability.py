@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+from PIL import Image
 from torchvision import transforms
 from src.config import FIGURES_DIR
 import logging
@@ -144,3 +145,58 @@ def overlay_heatmap(img_tensor, heatmap, save_path=None):
         logging.info(f"Saved visualization to {save_path}")
         
     return cam_result
+
+def generate_robustness_grid(model, model_name, raw_image, corruption_type, device, save_path):
+    """
+    Applies a sequence of corruptions (Clean -> Severity 5), generates heatmaps, and plots in a 2x3 Grid.
+    """
+    from src.core.corruptions import apply_corruption
+    
+    post_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                             std=[0.229, 0.224, 0.225])
+    ])
+    
+    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    axes = axes.flatten()
+    
+    for sev in range(6):
+        img_np = np.array(raw_image.resize((224, 224)))
+        if sev > 0:
+            img_np = apply_corruption(img_np, corruption_type, sev)
+            
+        img_pil = Image.fromarray(img_np.astype('uint8'))
+        img_tensor = post_transform(img_pil).unsqueeze(0).to(device)
+        
+        if model_name == "resnet50":
+            cam = GradCAM(model, target_layer=model.layer4)
+            heatmap = cam.generate(img_tensor)
+        elif model_name == "vit_b_16":
+            heatmap = generate_vit_attention(model, img_tensor)
+            
+        inv_normalize = transforms.Normalize(
+            mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+            std=[1/0.229, 1/0.224, 1/0.225]
+        )
+        base_img = inv_normalize(img_tensor.squeeze(0)).permute(1, 2, 0).cpu().numpy()
+        base_img = np.clip(base_img, 0, 1)
+        
+        heatmap_resized = cv2.resize(heatmap, (224, 224))
+        heatmap_colored = cv2.applyColorMap(np.uint8(255 * heatmap_resized), cv2.COLORMAP_JET)
+        heatmap_colored = np.float32(heatmap_colored) / 255
+        heatmap_colored = heatmap_colored[..., ::-1]
+        
+        cam_result = heatmap_colored * 0.5 + base_img * 0.5
+        cam_result = np.clip(cam_result, 0, 1)
+        
+        title = "Clean" if sev == 0 else f"{corruption_type.capitalize()} (Sev {sev})"
+        
+        axes[sev].imshow(cam_result)
+        axes[sev].set_title(title, fontsize=14)
+        axes[sev].axis('off')
+        
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    logging.info(f"Saved {corruption_type} grid progression to {save_path}")
