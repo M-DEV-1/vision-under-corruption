@@ -1,10 +1,6 @@
 # Data
 data/
 
-# Checkpoints
-checkpoints/
-*.pth
-
 # Python
 __pycache__/
 *.py[cod]
