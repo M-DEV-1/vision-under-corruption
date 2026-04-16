@@ -117,7 +117,7 @@ def overlay_heatmap(img_tensor, heatmap, save_path=None):
         mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
         std=[1/0.229, 1/0.224, 1/0.225]
     )
-    img = inv_normalize(img_tensor.squeeze(0)).permute(1, 2, 0).cpu().numpy()
+    img = inv_normalize(img_tensor.squeeze(0)).permute(1, 2, 0).detach().cpu().numpy()
     img = np.clip(img, 0, 1)
     
     # Upsample heatmap to image size
@@ -184,7 +184,7 @@ def generate_robustness_grid(model, model_name, raw_image, corruption_type, devi
             mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
             std=[1/0.229, 1/0.224, 1/0.225]
         )
-        base_img = inv_normalize(img_tensor.squeeze(0)).permute(1, 2, 0).cpu().numpy()
+        base_img = inv_normalize(img_tensor.squeeze(0)).permute(1, 2, 0).detach().cpu().numpy()
         base_img = np.clip(base_img, 0, 1)
         
         heatmap_resized = cv2.resize(heatmap, (224, 224))
