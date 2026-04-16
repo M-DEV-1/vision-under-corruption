@@ -76,19 +76,35 @@ def main():
             model = model.to(device)
             model.eval()
             
-            # Fetch a raw un-transformed validation sample
+            # Fetch raw un-transformed validation samples
             from src.data.dataset import get_caltech101_splits
             _, raw_val_dataset, _ = get_caltech101_splits(DATA_DIR, transform=None)
-            raw_image, label_idx = raw_val_dataset[0]
-            label_name = classes[label_idx]
             
-            # We will generate a progression grid for 'blur' as the showcase
-            save_path = os.path.join(FIGURES_DIR, f"{model_name}_{label_name}_blur_grid.png")
-            generate_robustness_grid(model, model_name, raw_image, 'blur', device, save_path)
+            # Dynamically select 5 diverse distinct classes from the validation set
+            seen_classes = set()
+            images_to_plot = []
+            for i in range(len(raw_val_dataset)):
+                img, label_idx = raw_val_dataset[i]
+                if label_idx not in seen_classes:
+                    seen_classes.add(label_idx)
+                    images_to_plot.append((img, classes[label_idx]))
+                if len(images_to_plot) >= 5:
+                    break
             
-            # Generate a progression grid for 'noise'
-            save_path_noise = os.path.join(FIGURES_DIR, f"{model_name}_{label_name}_noise_grid.png")
-            generate_robustness_grid(model, model_name, raw_image, 'noise', device, save_path_noise)
+            for raw_image, label_name in images_to_plot:
+                logging.info(f"--- Generating Grids for Object: {label_name} ---")
+                
+                # Generate Blur Grid
+                save_path_blur = os.path.join(FIGURES_DIR, f"{model_name}_{label_name}_blur_grid.png")
+                generate_robustness_grid(model, model_name, raw_image, 'blur', device, save_path_blur)
+                
+                # Generate Noise Grid
+                save_path_noise = os.path.join(FIGURES_DIR, f"{model_name}_{label_name}_noise_grid.png")
+                generate_robustness_grid(model, model_name, raw_image, 'noise', device, save_path_noise)
+                
+                # Generate Rotation Grid
+                save_path_rot = os.path.join(FIGURES_DIR, f"{model_name}_{label_name}_rotation_grid.png")
+                generate_robustness_grid(model, model_name, raw_image, 'rotation', device, save_path_rot)
 
 if __name__ == "__main__":
     main()
