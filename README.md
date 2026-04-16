@@ -84,7 +84,7 @@ attention-vit/
 ├── scripts/
 │   └── run.py                 # Main entry point
 ├── notebooks/                 
-│   └── 01_colab_training_pipeline.ipynb # Interactive Colab runtime
+│   └── 01_pipeline.ipynb      # Interactive execution and visualization
 ├── requirements.txt
 └── results/
     ├── tables/                # CSV results (tracked)
